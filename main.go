@@ -4,35 +4,32 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/mishlahul/simple-todo/application/db"
-	"github.com/mishlahul/simple-todo/application/handlers"
+	"github.com/gin-gonic/gin"
+	"github.com/mishlahul/simple-todo/application/controllers"
 	"github.com/mishlahul/simple-todo/application/models"
-	log "github.com/sirupsen/logrus"
-	// "gorm.io/gorm"
 )
 
-func init() {
-	log.SetFormatter(&log.TextFormatter{})
-	log.SetReportCaller(true)
-}
-
 func main() {
-	log.Info("Starting Todo API")
+	r := gin.Default()
 
-	db := db.DbInit()
-	defer db.Close()
-	db.DropTableIfExist(&models.TodoItem{}, &models.User{})
-	db.AutoMigrate(&models.TodoItem{}, &models.User{})
+	models.ConnectDatabase()
 
-	router := mux.NewRouter()
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"data": "todo-list"})
+	})
 
-	router.HandleFunc("/healthcheck", healthcheckHandler).Methods("GET")
+	r.GET("/users", controllers.FindAllUser)
+	r.GET("/todos", controllers.FindAllTodoItem)
+	r.GET("/users/:id", controllers.FindUser)
+	r.GET("/todos/:id", controllers.FindTodoItem)
+	r.POST("/users", controllers.CreateUser)
+	r.POST("/todos", controllers.CreateTodoItem)
+	r.PATCH("/users/:id", controllers.UpdateUser)
+	r.PATCH("/todos/:id", controllers.UpdateTodoItem)
+	r.DELETE("/users/:id", controllers.DeleteUser)
+	r.DELETE("/todos/:id", controllers.DeleteTodoItem)
 
-	router.HandleFunc("/register", handlers.CreateUserHandler(db)).Methods("POST")
-	router.HandleFunc("/users", handlers.GetListUserHandler(db)).Methods("GET")
-
-	http.ListenAndServe(":8080", router)
+	r.Run()
 
 }
 
